@@ -1,0 +1,27 @@
+name: Deploy Ethereum (Sepolia)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+      - 'hardhat.config.js'
+  workflow_dispatch:
+
+jobs:
+  compile-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Compile contracts
+        run: npx hardhat compile
+      - name: Run tests
+        run: npx hardhat test
+      - name: Deploy to Sepolia (mock – no real deployment in Week 1)
+        run: |
+          echo "Deployment step ready – will deploy ShortPosition.sol in Week 2+"
+          # Actual command would be: npx hardhat run scripts/deploy.js --network sepolia

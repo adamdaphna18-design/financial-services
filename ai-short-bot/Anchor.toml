@@ -1,0 +1,15 @@
+# Week 1 placeholder – Solana program scaffolding
+# Real Anchor program will be added in later weeks
+
+[programs.devnet]
+ai_short_bot = "TODO_ProgramId"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json ./tests/**/*.ts"

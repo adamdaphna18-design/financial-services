@@ -1,0 +1,27 @@
+name: Build Solana Program (Devnet)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'programs/**'
+      - 'Anchor.toml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: metadaoproject/setup-anchor@v2
+        with:
+          anchor-version: "0.29.0"
+          solana-cli-version: "1.18.17"
+      - name: Build program
+        run: anchor build
+      - name: Run tests (placeholder)
+        run: anchor test --skip-local-validator || echo "No tests yet"
+      - name: Deploy to devnet (mock)
+        run: |
+          echo "Deployment will be added in Week 2+"
+          # anchor deploy --provider.cluster devnet
