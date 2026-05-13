@@ -38,11 +38,12 @@ def rel(p: Path) -> str:
 
 
 # --- 1. YAML parse ----------------------------------------------------------
+parsed_yamls: dict[Path, dict] = {}
 for yml in sorted(MANAGED.rglob("*.yaml")):
     checked += 1
     try:
         with open(yml) as f:
-            yaml.safe_load(f)
+            parsed_yamls[yml] = yaml.safe_load(f) or {}
     except yaml.YAMLError as e:
         err(f"YAML parse: {rel(yml)}: {e}")
 
@@ -79,10 +80,9 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
 
 # --- 4. reference resolution -----------------------------------------------
 def check_refs(yml: Path) -> None:
-    try:
-        data = yaml.safe_load(yml.read_text()) or {}
-    except yaml.YAMLError:
+    if yml not in parsed_yamls:
         return  # already reported above
+    data = parsed_yamls[yml]
     base = yml.parent
 
     sys_spec = data.get("system")
