@@ -32,6 +32,22 @@ class NumberInstance:
     category: str       # Detected category (revenue, margin, multiple, etc.)
 
 
+# Pattern for slide markers (from markitdown format)
+SLIDE_PATTERN = re.compile(r'^#+\s*Slide\s*(\d+)|^<!-- Slide (\d+)')
+
+# Pattern for numbers with various formats
+# Matches: $500M, 500M, $500 million, 25%, 25.5%, 2.5x, 150bps, $1,234.56, etc.
+NUMBER_PATTERN = re.compile(
+    r'(?P<currency>[$€£¥])?'  # Optional currency symbol
+    r'(?P<number>[\d,]+(?:\.\d+)?)'  # The number itself
+    r'\s*'
+    r'(?P<unit>%|bps|x|'  # Common units
+    r'[Tt]rillion|[Bb]illion|[Mm]illion|[Tt]housand|'  # Full words
+    r'[TBMKtbmk]n?|mm|MM)?'  # Abbreviations
+    r'(?!\d)'  # Negative lookahead to avoid partial matches
+)
+
+
 def normalize_number(value_str: str, unit: str) -> float:
     """Convert a number string with unit to a normalized float value."""
     # Remove commas and spaces
@@ -110,32 +126,17 @@ def extract_numbers(content: str) -> list[NumberInstance]:
     numbers = []
     current_slide = 0
 
-    # Pattern for slide markers (from markitdown format)
-    slide_pattern = re.compile(r'^#+\s*Slide\s*(\d+)|^<!-- Slide (\d+)')
-
-    # Pattern for numbers with various formats
-    # Matches: $500M, 500M, $500 million, 25%, 25.5%, 2.5x, 150bps, $1,234.56, etc.
-    number_pattern = re.compile(
-        r'(?P<currency>[$€£¥])?'  # Optional currency symbol
-        r'(?P<number>[\d,]+(?:\.\d+)?)'  # The number itself
-        r'\s*'
-        r'(?P<unit>%|bps|x|'  # Common units
-        r'[Tt]rillion|[Bb]illion|[Mm]illion|[Tt]housand|'  # Full words
-        r'[TBMKtbmk]n?|mm|MM)?'  # Abbreviations
-        r'(?!\d)'  # Negative lookahead to avoid partial matches
-    )
-
     lines = content.split('\n')
 
     for line_num, line in enumerate(lines, 1):
         # Check for slide marker
-        slide_match = slide_pattern.match(line)
+        slide_match = SLIDE_PATTERN.match(line)
         if slide_match:
             current_slide = int(slide_match.group(1) or slide_match.group(2))
             continue
 
         # Find all numbers in the line
-        for match in number_pattern.finditer(line):
+        for match in NUMBER_PATTERN.finditer(line):
             value_str = match.group('number')
             currency = match.group('currency') or ''
             unit = match.group('unit') or ''
