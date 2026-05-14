@@ -32,10 +32,26 @@ class NumberInstance:
     category: str       # Detected category (revenue, margin, multiple, etc.)
 
 
+# Pre-computed unit multipliers for faster normalization
+_UNIT_MULTIPLIERS = {
+    't': 1e12,
+    'b': 1e9,
+    'bn': 1e9,
+    'billion': 1e9,
+    'm': 1e6,
+    'mm': 1e6,
+    'mn': 1e6,
+    'million': 1e6,
+    'k': 1e3,
+    'thousand': 1e3,
+}
+_SORTED_UNIT_KEYS = sorted(_UNIT_MULTIPLIERS.keys(), key=len, reverse=True)
+
+
 def normalize_number(value_str: str, unit: str) -> float:
     """Convert a number string with unit to a normalized float value."""
-    # Remove commas and spaces
-    clean = re.sub(r'[,\s]', '', value_str)
+    # Remove commas and spaces (faster than regex)
+    clean = value_str.replace(',', '').replace(' ', '')
 
     try:
         base_value = float(clean)
@@ -43,23 +59,10 @@ def normalize_number(value_str: str, unit: str) -> float:
         return 0.0
 
     # Apply unit multipliers
-    multipliers = {
-        'T': 1e12,
-        'B': 1e9,
-        'bn': 1e9,
-        'billion': 1e9,
-        'M': 1e6,
-        'mm': 1e6,
-        'mn': 1e6,
-        'million': 1e6,
-        'K': 1e3,
-        'k': 1e3,
-        'thousand': 1e3,
-    }
-
-    for unit_key in sorted(multipliers.keys(), key=len, reverse=True):
-        if unit_key.lower() in unit.lower():
-            return base_value * multipliers[unit_key]
+    unit_lower = unit.lower()
+    for unit_key in _SORTED_UNIT_KEYS:
+        if unit_key in unit_lower:
+            return base_value * _UNIT_MULTIPLIERS[unit_key]
 
     return base_value
 
