@@ -1,0 +1,20 @@
+{
+  "name": "ai-short-bot",
+  "version": "0.1.0",
+  "description": "Week 1 scaffolding – mock AI shorting agent with CI/CD",
+  "main": "scripts/trigger-short.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "signal": "node scripts/signal.js",
+    "execute": "npx hardhat run scripts/execute-short.js --network sepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "axios": "^1.16.0"
+  }
+}
