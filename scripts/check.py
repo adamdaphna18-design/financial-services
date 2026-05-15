@@ -131,11 +131,12 @@ for bundled in sorted(PLUGINS.glob("agent-plugins/*/skills/*")):
         )
 
 # --- 4b2. agent.md skill references exist in the agent's own bundle --------
+RE_SKILL_REF = re.compile(r"`([a-z0-9]+(?:-[a-z0-9]+)+)`")
 for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
     slug = md.parents[1].name
     sk_dir = PLUGINS / "agent-plugins" / slug / "skills"
     bundle = {p.name for p in sk_dir.iterdir() if p.is_dir()} if sk_dir.is_dir() else set()
-    for ref in set(re.findall(r"`([a-z0-9]+(?:-[a-z0-9]+)+)`", md.read_text())):
+    for ref in set(RE_SKILL_REF.findall(md.read_text())):
         if ref in src_by_name and ref not in bundle:
             err(
                 f"agent-prose: {rel(md)}: references `{ref}` but "
