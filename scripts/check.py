@@ -22,11 +22,17 @@ except ImportError:
     print("ERROR: requires pyyaml (pip install pyyaml)", file=sys.stderr)
     sys.exit(2)
 
+try:
+    from yaml import CSafeLoader as SafeLoader
+except ImportError:
+    from yaml import SafeLoader
+
 ROOT = Path(__file__).resolve().parents[1]
 PLUGINS = ROOT / "plugins"
 MANAGED = ROOT / "managed-agent-cookbooks"
 errors: list[str] = []
 checked = 0
+yaml_cache: dict[Path, dict] = {}
 
 
 def err(msg: str) -> None:
@@ -42,7 +48,7 @@ for yml in sorted(MANAGED.rglob("*.yaml")):
     checked += 1
     try:
         with open(yml) as f:
-            yaml.safe_load(f)
+            yaml_cache[yml] = yaml.load(f, Loader=SafeLoader)
     except yaml.YAMLError as e:
         err(f"YAML parse: {rel(yml)}: {e}")
 
@@ -69,7 +75,7 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
         continue
     try:
         _, fm, _ = text.split("---", 2)
-        meta = yaml.safe_load(fm)
+        meta = yaml.load(fm, Loader=SafeLoader)
         for k in ("name", "description"):
             if k not in meta:
                 err(f"frontmatter: {rel(md)}: missing '{k}'")
@@ -79,10 +85,14 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
 
 # --- 4. reference resolution -----------------------------------------------
 def check_refs(yml: Path) -> None:
-    try:
-        data = yaml.safe_load(yml.read_text()) or {}
-    except yaml.YAMLError:
-        return  # already reported above
+    if yml in yaml_cache:
+        data = yaml_cache[yml] or {}
+    else:
+        try:
+            data = yaml.load(yml.read_text(), Loader=SafeLoader) or {}
+            yaml_cache[yml] = data
+        except yaml.YAMLError:
+            return  # already reported above
     base = yml.parent
 
     sys_spec = data.get("system")
@@ -115,6 +125,8 @@ for yml in sorted(MANAGED.rglob("*.yaml")):
 import filecmp  # noqa: E402
 import re  # noqa: E402
 
+RE_SKILL_REF = re.compile(r"`([a-z0-9]+(?:-[a-z0-9]+)+)`")
+
 src_by_name = {p.name: p for p in PLUGINS.glob("vertical-plugins/*/skills/*") if p.is_dir()}
 for bundled in sorted(PLUGINS.glob("agent-plugins/*/skills/*")):
     if not bundled.is_dir():
@@ -135,7 +147,7 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
     slug = md.parents[1].name
     sk_dir = PLUGINS / "agent-plugins" / slug / "skills"
     bundle = {p.name for p in sk_dir.iterdir() if p.is_dir()} if sk_dir.is_dir() else set()
-    for ref in set(re.findall(r"`([a-z0-9]+(?:-[a-z0-9]+)+)`", md.read_text())):
+    for ref in set(RE_SKILL_REF.findall(md.read_text())):
         if ref in src_by_name and ref not in bundle:
             err(
                 f"agent-prose: {rel(md)}: references `{ref}` but "
