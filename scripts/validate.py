@@ -14,12 +14,20 @@ from pathlib import Path
 
 import jsonschema
 
+try:
+    import yaml
+    try:
+        from yaml import CSafeLoader as SafeLoader
+    except ImportError:
+        from yaml import SafeLoader
+except ImportError:
+    pass
+
 
 def _load(path: Path):
     text = path.read_text()
     if path.suffix in (".yaml", ".yml"):
-        import yaml
-        return yaml.safe_load(text)
+        return yaml.load(text, Loader=SafeLoader)
     return json.loads(text)
 
 
