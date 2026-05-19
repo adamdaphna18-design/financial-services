@@ -47,11 +47,15 @@ def sub(m):
     return v
 t = open(sys.argv[1]).read()
 t = re.sub(r"\$\{([A-Z0-9_]+)\}", sub, t)
-json.dump(yaml.safe_load(t), sys.stdout)
+try:
+    from yaml import CSafeLoader as SafeLoader
+except ImportError:
+    from yaml import SafeLoader
+json.dump(yaml.load(t, Loader=SafeLoader), sys.stdout)
 ' "$1"
 }
 
-SKILL_CACHE_FILE="$(mktemp -t skillcache)"
+SKILL_CACHE_FILE="$(mktemp -t skillcacheXXXXXX)"
 trap 'rm -f "$SKILL_CACHE_FILE"' EXIT
 upload_skill() {
   local path="$1" key cached
@@ -64,7 +68,7 @@ upload_skill() {
     printf '%s' "$cached"; return
   fi
   local resp id zip
-  zip="$(mktemp -t skill).zip"
+  zip="$(mktemp -t skillXXXXXX).zip"
   (cd "$(dirname "$path")" && zip -qr "$zip" "$(basename "$path")")
   # /v1/skills uses its own beta header and multipart, not the managed-agents JSON path
   resp=$(curl -sS "$API/v1/skills" \
@@ -171,7 +175,7 @@ create_agent() {
 }
 
 if [[ $DRY_RUN -eq 1 ]]; then
-  DRY_OUT="$(mktemp)"
+  DRY_OUT="$(mktemp -t dryoutXXXXXX)"
   create_agent "$DIR/agent.yaml" >/dev/null
   echo "# --dry-run: resolved POST /v1/agents bodies (subagents first, orchestrator last)"
   jq -s '.' "$DRY_OUT"
