@@ -1,0 +1,36 @@
+<<<<<<< SEARCH
+_yaml_cache = {}
+
+
+def load_yaml(path: Path) -> dict | None:
+    if path in _yaml_cache:
+        return _yaml_cache[path]
+    try:
+        with open(path) as f:
+            data = yaml.load(f, Loader=SafeLoader)
+        _yaml_cache[path] = data
+        return data
+    except yaml.YAMLError as e:
+        err(f"YAML parse: {rel(path)}: {e}")
+        return None
+=======
+# Cache for parsed YAML and JSON to avoid redundant I/O and parsing
+# Note: CSafeLoader is used above to substantially improve parsing speed.
+_yaml_cache = {}
+_yaml_error_cache = set()
+
+def load_yaml(path: Path) -> dict | None:
+    if path in _yaml_error_cache:
+        return None
+    if path in _yaml_cache:
+        return _yaml_cache[path]
+    try:
+        with open(path) as f:
+            data = yaml.load(f, Loader=SafeLoader)
+        _yaml_cache[path] = data
+        return data
+    except yaml.YAMLError as e:
+        _yaml_error_cache.add(path)
+        err(f"YAML parse: {rel(path)}: {e}")
+        return None
+>>>>>>> REPLACE
