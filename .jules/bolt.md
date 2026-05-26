@@ -1,3 +1,6 @@
 ## 2024-05-18 - [Python Module Level Optimization]
 **Learning:** Instantiating dictionaries and running `sorted()` dynamically inside heavily called string-parsing functions is a major bottleneck in Python. Regex can also add noticeable overhead compared to standard string `replace()` operations for simple substitutions.
 **Action:** When extracting data in a tight loop, look for dictionary instantiations and sorts that can be lifted to module-level constants. Replace regexes with `.replace()` chaining if it matches the use-case (e.g., removing commas and spaces from numbers).
+## 2024-05-19 - [Optimize YAML Parsing with CSafeLoader and Caching]
+**Learning:** Default pure-Python `yaml.safe_load` from `pyyaml` is significantly slower compared to its C-extension counterpart `yaml.CSafeLoader`. Furthermore, repetitively reading and parsing the same YAML files in scripts (like linters/checkers) compounds the overhead unnecessarily.
+**Action:** Always attempt to import and use `yaml.CSafeLoader` (with a fallback to `yaml.SafeLoader` for compatibility) in heavily utilized Python scripts parsing YAML. Additionally, cache parsed YAML results into memory when files are processed multiple times within the same execution loop.
