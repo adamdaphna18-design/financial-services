@@ -51,7 +51,7 @@ json.dump(yaml.safe_load(t), sys.stdout)
 ' "$1"
 }
 
-SKILL_CACHE_FILE="$(mktemp -t skillcache)"
+SKILL_CACHE_FILE="$(mktemp -t skillcache.XXXXXX)"
 trap 'rm -f "$SKILL_CACHE_FILE"' EXIT
 upload_skill() {
   local path="$1" key cached
