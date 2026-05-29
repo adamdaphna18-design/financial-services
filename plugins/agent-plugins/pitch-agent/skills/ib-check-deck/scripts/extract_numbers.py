@@ -17,7 +17,6 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -67,38 +66,45 @@ def normalize_number(value_str: str, unit: str) -> float:
     return base_value
 
 
+_REVENUE_TERMS = ('revenue', 'sales', 'top line', 'topline')
+_EBITDA_MARGIN_TERMS = ('margin', '%', 'percent')
+_MARGIN_TERMS = ('margin', 'profit')
+_GROWTH_TERMS = ('growth', 'cagr', 'yoy', 'y/y')
+_MULTIPLE_TERMS = ('multiple', 'ev/', 'p/e', 'ev/ebitda', 'ev/revenue')
+_VALUATION_TERMS = ('enterprise value', 'ev ', 'market cap')
+
 def detect_category(context: str, unit: str) -> str:
     """Detect the category of a number based on context and unit."""
     context_lower = context.lower()
 
     # Revenue-related
-    if any(term in context_lower for term in ['revenue', 'sales', 'top line', 'topline']):
+    if any(term in context_lower for term in _REVENUE_TERMS):
         return 'revenue'
 
     # EBITDA-related
     if 'ebitda' in context_lower:
-        if any(term in context_lower for term in ['margin', '%', 'percent']):
+        if any(term in context_lower for term in _EBITDA_MARGIN_TERMS):
             return 'ebitda_margin'
         return 'ebitda'
 
     # Margin-related
-    if any(term in context_lower for term in ['margin', 'profit']):
+    if any(term in context_lower for term in _MARGIN_TERMS):
         return 'margin'
 
     # Growth-related
-    if any(term in context_lower for term in ['growth', 'cagr', 'yoy', 'y/y']):
+    if any(term in context_lower for term in _GROWTH_TERMS):
         return 'growth'
 
     # Valuation multiples
-    if any(term in context_lower for term in ['multiple', 'ev/', 'p/e', 'ev/ebitda', 'ev/revenue']):
+    if any(term in context_lower for term in _MULTIPLE_TERMS):
         return 'multiple'
 
     # Enterprise value / market cap
-    if any(term in context_lower for term in ['enterprise value', 'ev ', 'market cap']):
+    if any(term in context_lower for term in _VALUATION_TERMS):
         return 'valuation'
 
     # Percentage (generic)
-    if unit in ['%', 'bps', 'percent']:
+    if unit in ('%', 'bps', 'percent'):
         return 'percentage'
 
     # Multiple indicator
@@ -108,37 +114,37 @@ def detect_category(context: str, unit: str) -> str:
     return 'other'
 
 
+# Pattern for slide markers (from markitdown format)
+_SLIDE_PATTERN = re.compile(r'^#+\s*Slide\s*(\d+)|^<!-- Slide (\d+)')
+
+# Pattern for numbers with various formats
+# Matches: $500M, 500M, $500 million, 25%, 25.5%, 2.5x, 150bps, $1,234.56, etc.
+_NUMBER_PATTERN = re.compile(
+    r'(?P<currency>[$€£¥])?'  # Optional currency symbol
+    r'(?P<number>[\d,]+(?:\.\d+)?)'  # The number itself
+    r'\s*'
+    r'(?P<unit>%|bps|x|'  # Common units
+    r'[Tt]rillion|[Bb]illion|[Mm]illion|[Tt]housand|'  # Full words
+    r'[TBMKtbmk]n?|mm|MM)?'  # Abbreviations
+    r'(?!\d)'  # Negative lookahead to avoid partial matches
+)
+
 def extract_numbers(content: str) -> list[NumberInstance]:
     """Extract all numbers from presentation content."""
     numbers = []
     current_slide = 0
 
-    # Pattern for slide markers (from markitdown format)
-    slide_pattern = re.compile(r'^#+\s*Slide\s*(\d+)|^<!-- Slide (\d+)')
-
-    # Pattern for numbers with various formats
-    # Matches: $500M, 500M, $500 million, 25%, 25.5%, 2.5x, 150bps, $1,234.56, etc.
-    number_pattern = re.compile(
-        r'(?P<currency>[$€£¥])?'  # Optional currency symbol
-        r'(?P<number>[\d,]+(?:\.\d+)?)'  # The number itself
-        r'\s*'
-        r'(?P<unit>%|bps|x|'  # Common units
-        r'[Tt]rillion|[Bb]illion|[Mm]illion|[Tt]housand|'  # Full words
-        r'[TBMKtbmk]n?|mm|MM)?'  # Abbreviations
-        r'(?!\d)'  # Negative lookahead to avoid partial matches
-    )
-
     lines = content.split('\n')
 
     for line_num, line in enumerate(lines, 1):
         # Check for slide marker
-        slide_match = slide_pattern.match(line)
+        slide_match = _SLIDE_PATTERN.match(line)
         if slide_match:
             current_slide = int(slide_match.group(1) or slide_match.group(2))
             continue
 
         # Find all numbers in the line
-        for match in number_pattern.finditer(line):
+        for match in _NUMBER_PATTERN.finditer(line):
             value_str = match.group('number')
             currency = match.group('currency') or ''
             unit = match.group('unit') or ''
