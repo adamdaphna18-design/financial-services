@@ -36,6 +36,10 @@ python3 -c 'import yaml' 2>/dev/null || { echo "requires python3 + pyyaml" >&2; 
 yaml2json() {
   python3 -c '
 import sys,os,re,yaml,json
+try:
+    from yaml import CSafeLoader as SafeLoader
+except ImportError:
+    from yaml import SafeLoader
 SAFE = re.compile(r"^[A-Za-z0-9._/:@-]*$")
 def sub(m):
     name = m.group(1)
@@ -47,11 +51,11 @@ def sub(m):
     return v
 t = open(sys.argv[1]).read()
 t = re.sub(r"\$\{([A-Z0-9_]+)\}", sub, t)
-json.dump(yaml.safe_load(t), sys.stdout)
+json.dump(yaml.load(t, Loader=SafeLoader), sys.stdout)
 ' "$1"
 }
 
-SKILL_CACHE_FILE="$(mktemp -t skillcache)"
+SKILL_CACHE_FILE="$(mktemp -t skillcacheXXXXXX)"
 trap 'rm -f "$SKILL_CACHE_FILE"' EXIT
 upload_skill() {
   local path="$1" key cached
@@ -64,7 +68,7 @@ upload_skill() {
     printf '%s' "$cached"; return
   fi
   local resp id zip
-  zip="$(mktemp -t skill).zip"
+  zip="$(mktemp -t skillXXXXXX).zip"
   (cd "$(dirname "$path")" && zip -qr "$zip" "$(basename "$path")")
   # /v1/skills uses its own beta header and multipart, not the managed-agents JSON path
   resp=$(curl -sS "$API/v1/skills" \
