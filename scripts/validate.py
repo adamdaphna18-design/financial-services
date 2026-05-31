@@ -19,7 +19,11 @@ def _load(path: Path):
     text = path.read_text()
     if path.suffix in (".yaml", ".yml"):
         import yaml
-        return yaml.safe_load(text)
+        try:
+            from yaml import CSafeLoader as SafeLoader
+        except ImportError:
+            from yaml import SafeLoader
+        return yaml.load(text, Loader=SafeLoader)
     return json.loads(text)
 
 
