@@ -8,6 +8,7 @@ The CMA API does not enforce structured output today, so the deploy harness
 runs this between a reader subagent and the orchestrator. Schemas live in each
 subagent yaml under `output_schema:` — the deploy script extracts them.
 """
+
 import json
 import sys
 from pathlib import Path
@@ -19,6 +20,7 @@ def _load(path: Path):
     text = path.read_text()
     if path.suffix in (".yaml", ".yml"):
         import yaml
+
         return yaml.safe_load(text)
     return json.loads(text)
 
@@ -32,7 +34,10 @@ def main() -> int:
     try:
         jsonschema.validate(instance=instance, schema=schema)
     except jsonschema.ValidationError as e:
-        print(f"INVALID: {e.message} at {'/'.join(str(p) for p in e.absolute_path)}", file=sys.stderr)
+        print(
+            f"INVALID: {e.message} at {'/'.join(str(p) for p in e.absolute_path)}",
+            file=sys.stderr,
+        )
         return 1
     print("OK")
     return 0
