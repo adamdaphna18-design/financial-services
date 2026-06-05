@@ -9,6 +9,7 @@ into every agent that bundles it.
 
 Usage: python3 scripts/sync-agent-skills.py
 """
+
 import shutil
 import sys
 from pathlib import Path

@@ -9,6 +9,7 @@ Usage:
 
 Set the result as TENANT_ID before running app.py.
 """
+
 import json
 import subprocess
 import sys
@@ -27,7 +28,9 @@ def from_domain(domain: str) -> str:
 def from_az_cli() -> str:
     out = subprocess.run(
         ["az", "account", "show", "--query", "tenantId", "-o", "tsv"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return out.stdout.strip()
 

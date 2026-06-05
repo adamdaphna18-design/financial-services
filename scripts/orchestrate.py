@@ -13,6 +13,7 @@ target_agent against the deployed slugs and (b) schema-validating the payload
 before steering. In production, prefer emitting handoffs via a dedicated tool
 call or a typed SSE event the model cannot produce by quoting document text.
 """
+
 import json
 import os
 import re
@@ -21,9 +22,16 @@ import anthropic
 import jsonschema
 
 ALLOWED_TARGETS = {
-    "pitch-agent", "market-researcher", "earnings-reviewer", "meeting-prep-agent",
-    "model-builder", "gl-reconciler", "kyc-screener",
-    "valuation-reviewer", "month-end-closer", "statement-auditor",
+    "pitch-agent",
+    "market-researcher",
+    "earnings-reviewer",
+    "meeting-prep-agent",
+    "model-builder",
+    "gl-reconciler",
+    "kyc-screener",
+    "valuation-reviewer",
+    "month-end-closer",
+    "statement-auditor",
 }
 
 HANDOFF_PAYLOAD_SCHEMA = {
@@ -32,14 +40,15 @@ HANDOFF_PAYLOAD_SCHEMA = {
     "required": ["event"],
     "properties": {
         "event": {"type": "string", "maxLength": 2000},
-        "context_ref": {"type": "string", "maxLength": 256,
-                        "pattern": r"^[A-Za-z0-9 ._/:#-]+$"},
+        "context_ref": {
+            "type": "string",
+            "maxLength": 256,
+            "pattern": r"^[A-Za-z0-9 ._/:#-]+$",
+        },
     },
 }
 
-HANDOFF_RE = re.compile(
-    r'\{"type":\s*"handoff_request".*?\}', re.DOTALL
-)
+HANDOFF_RE = re.compile(r'\{"type":\s*"handoff_request".*?\}', re.DOTALL)
 
 
 def extract_handoff(text: str) -> dict | None:
