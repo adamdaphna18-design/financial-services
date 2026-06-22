@@ -18,6 +18,11 @@ from pathlib import Path
 
 try:
     import yaml
+
+    try:
+        from yaml import CSafeLoader as SafeLoader
+    except ImportError:
+        from yaml import SafeLoader
 except ImportError:
     print("ERROR: requires pyyaml (pip install pyyaml)", file=sys.stderr)
     sys.exit(2)
@@ -38,11 +43,13 @@ def rel(p: Path) -> str:
 
 
 # --- 1. YAML parse ----------------------------------------------------------
+yaml_cache: dict[Path, dict] = {}
 for yml in sorted(MANAGED.rglob("*.yaml")):
     checked += 1
     try:
         with open(yml) as f:
-            yaml.safe_load(f)
+            parsed = yaml.load(f, Loader=SafeLoader)
+            yaml_cache[yml] = parsed or {}
     except yaml.YAMLError as e:
         err(f"YAML parse: {rel(yml)}: {e}")
 
@@ -69,7 +76,7 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
         continue
     try:
         _, fm, _ = text.split("---", 2)
-        meta = yaml.safe_load(fm)
+        meta = yaml.load(fm, Loader=SafeLoader)
         for k in ("name", "description"):
             if k not in meta:
                 err(f"frontmatter: {rel(md)}: missing '{k}'")
@@ -79,10 +86,14 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
 
 # --- 4. reference resolution -----------------------------------------------
 def check_refs(yml: Path) -> None:
-    try:
-        data = yaml.safe_load(yml.read_text()) or {}
-    except yaml.YAMLError:
-        return  # already reported above
+    if yml in yaml_cache:
+        data = yaml_cache[yml]
+    else:
+        try:
+            data = yaml.load(yml.read_text(), Loader=SafeLoader) or {}
+            yaml_cache[yml] = data
+        except yaml.YAMLError:
+            return  # already reported above
     base = yml.parent
 
     sys_spec = data.get("system")
