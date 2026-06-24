@@ -18,6 +18,10 @@ from pathlib import Path
 
 try:
     import yaml
+    # Performance improvement: Use the C-based YAML loader if available.
+    # It is significantly faster than the default pure-Python SafeLoader.
+    if hasattr(yaml, "CSafeLoader"):
+        yaml.SafeLoader = yaml.CSafeLoader
 except ImportError:
     print("ERROR: requires pyyaml (pip install pyyaml)", file=sys.stderr)
     sys.exit(2)
