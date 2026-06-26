@@ -18,6 +18,7 @@ from pathlib import Path
 
 try:
     import yaml
+    Loader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
 except ImportError:
     print("ERROR: requires pyyaml (pip install pyyaml)", file=sys.stderr)
     sys.exit(2)
@@ -27,6 +28,7 @@ PLUGINS = ROOT / "plugins"
 MANAGED = ROOT / "managed-agent-cookbooks"
 errors: list[str] = []
 checked = 0
+_yaml_cache = {}
 
 
 def err(msg: str) -> None:
@@ -42,7 +44,7 @@ for yml in sorted(MANAGED.rglob("*.yaml")):
     checked += 1
     try:
         with open(yml) as f:
-            yaml.safe_load(f)
+            _yaml_cache[yml] = yaml.load(f, Loader=Loader)
     except yaml.YAMLError as e:
         err(f"YAML parse: {rel(yml)}: {e}")
 
@@ -69,7 +71,7 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
         continue
     try:
         _, fm, _ = text.split("---", 2)
-        meta = yaml.safe_load(fm)
+        meta = yaml.load(fm, Loader=Loader)
         for k in ("name", "description"):
             if k not in meta:
                 err(f"frontmatter: {rel(md)}: missing '{k}'")
@@ -79,10 +81,9 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
 
 # --- 4. reference resolution -----------------------------------------------
 def check_refs(yml: Path) -> None:
-    try:
-        data = yaml.safe_load(yml.read_text()) or {}
-    except yaml.YAMLError:
-        return  # already reported above
+    if yml not in _yaml_cache:
+        return  # already reported above or failed to parse
+    data = _yaml_cache[yml] or {}
     base = yml.parent
 
     sys_spec = data.get("system")
